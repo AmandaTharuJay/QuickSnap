@@ -1,2 +1,2 @@
 #Quick Snap!
-A two player version of the classic Snap card game... hit when the rank of the top cards match.
+A two player version of the classic Snap card game... hit when the rank of the top cards match and the player get hit.
