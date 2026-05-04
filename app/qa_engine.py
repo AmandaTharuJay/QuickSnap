@@ -71,6 +71,8 @@ def now_iso() -> str:
 def answer_question(protocol: str, question: str) -> dict[str, Any]:
     selected = normalize_protocol(protocol)
     cleaned_question = question.strip()
+    if not cleaned_question:
+        raise ValueError("Question is required")
     profile = PROTOCOL_PROFILES[selected]
     lower_question = cleaned_question.lower()
 
@@ -106,6 +108,8 @@ def analyze_log(protocol: str, log_text: str) -> dict[str, Any]:
     selected = normalize_protocol(protocol)
     profile = PROTOCOL_PROFILES[selected]
     lines = [line.strip() for line in re.split(r"\r?\n", log_text) if line.strip()]
+    if not lines:
+        raise ValueError("Protocol log text is required")
     error_lines = [line for line in lines if re.search(r"error|fail|timeout|reject|invalid", line, re.I)]
     warning_lines = [line for line in lines if re.search(r"warn|retry|slow|delay", line, re.I)]
     identifiers: set[str] = set()
@@ -158,6 +162,8 @@ def draft_defect(protocol: str, summary: str, notes: str) -> dict[str, Any]:
     profile = PROTOCOL_PROFILES[selected]
     title = summary.strip() or f"{selected} protocol behavior differs from expected result"
     cleaned_notes = notes.strip()
+    if not summary.strip() and not cleaned_notes:
+        raise ValueError("Defect summary or notes are required")
 
     return {
         "type": "defect",

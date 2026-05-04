@@ -28,3 +28,12 @@ Validate the application files and QA engine behavior:
 ```sh
 python3 scripts/validate_static.py
 ```
+
+Run an end-to-end smoke test against a running app:
+
+```sh
+PORT=4173 python3 scripts/serve.py
+python3 scripts/smoke_test.py
+```
+
+The smoke test signs in, switches protocol, asks a question, analyzes a log, drafts a defect, exports a report, clears history, and signs out.

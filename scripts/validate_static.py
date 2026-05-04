@@ -81,9 +81,23 @@ def assert_python_application():
     if answer["risk"] != "High" or not answer["follow_up_questions"]:
         raise AssertionError("Question API engine did not produce expected guidance")
 
+    try:
+        answer_question("QCOM", "")
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("Question API engine should reject empty questions")
+
     analysis = analyze_log("QCOM", "AUTH approved txn=42\nERROR timeout txn=42")
     if analysis["severity"] != "High" or analysis["error_count"] != 1 or not analysis["timeline"]:
         raise AssertionError("Log analyzer did not detect high severity timeout")
+
+    try:
+        analyze_log("QCOM", "")
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("Log analyzer should reject empty logs")
 
     defect = draft_defect("SAS", "Meter mismatch", "Actual meter delta is wrong")
     if defect["protocol"] != "SAS" or not defect["acceptance_criteria"]:

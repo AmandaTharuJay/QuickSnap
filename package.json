@@ -1,11 +1,12 @@
 {
-  "name": "ai-qa-assistant-static",
+  "name": "ai-qa-assistant-application",
   "version": "1.0.0",
   "description": "AI QA Assistant application with session-backed protocol chat, log analysis, and defect drafting.",
   "private": true,
   "scripts": {
     "start": "python3 scripts/serve.py",
     "build": "python3 scripts/validate_static.py",
-    "test": "python3 scripts/validate_static.py"
+    "test": "python3 scripts/validate_static.py",
+    "smoke": "python3 scripts/smoke_test.py"
   }
 }
