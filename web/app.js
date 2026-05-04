@@ -1,35 +1,8 @@
 const state = {
-  protocol: localStorage.getItem("aiqa-protocol") || "QCOM",
-  signedIn: localStorage.getItem("aiqa-signed-in") === "true",
-  lastLogSummary: localStorage.getItem("aiqa-last-log-summary") || ""
-};
-
-const protocolProfiles = {
-  QCOM: {
-    focus: "authorization timing, host response codes, reversal behavior, and terminal state transitions",
-    evidence: ["transaction id", "auth request/response pair", "timeout window", "terminal firmware"],
-    checks: ["Confirm approved auths complete within the expected response window.", "Verify reversal messages are emitted when completion fails.", "Capture host and terminal timestamps for drift."]
-  },
-  SAS: {
-    focus: "polling cadence, event acknowledgements, meter deltas, and exception recovery",
-    evidence: ["poll sequence", "event id", "meter snapshot", "cabinet state"],
-    checks: ["Validate every event receives the expected acknowledgement.", "Compare meter deltas before and after the event.", "Check for duplicate polls during recovery."]
-  },
-  ASP: {
-    focus: "session negotiation, message framing, payload validation, and retry handling",
-    evidence: ["session id", "frame length", "payload checksum", "retry count"],
-    checks: ["Confirm frame boundaries match the declared length.", "Validate checksum failures trigger a bounded retry.", "Record negotiated capabilities."]
-  },
-  "X-Series": {
-    focus: "device orchestration, command sequencing, telemetry freshness, and failover",
-    evidence: ["device id", "command sequence", "telemetry sample", "failover state"],
-    checks: ["Ensure commands are idempotent across retries.", "Compare telemetry age against freshness thresholds.", "Capture failover transition markers."]
-  },
-  "All Protocols": {
-    focus: "test setup, reproducibility, clear evidence capture, and risk-based triage",
-    evidence: ["environment", "test data", "timestamps", "expected and actual behavior"],
-    checks: ["Define the protocol under test before triage.", "Preserve raw logs with timestamps.", "Document the smallest reproducible path."]
-  }
+  protocol: "QCOM",
+  signedIn: false,
+  user: null,
+  lastLogSummary: ""
 };
 
 const authScreen = document.getElementById("authScreen");
@@ -52,13 +25,31 @@ function setOutput(element, html) {
   element.innerHTML = html;
 }
 
-function escapeHtml(value) {
-  return value
+async function api(path, options = {}) {
+  const response = await fetch(path, {
+    headers: { "Content-Type": "application/json" },
+    ...options
+  });
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.error || "Request failed");
+  }
+
+  return data;
+}
+
+function escapeHtml(value = "") {
+  return String(value)
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function renderList(items) {
+  return `<ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`;
 }
 
 function routeTo(hash) {
@@ -71,109 +62,114 @@ function routeTo(hash) {
   });
 }
 
-function buildAnswer(question) {
-  const profile = protocolProfiles[state.protocol];
-  const lowerQuestion = question.toLowerCase();
-  const risk = lowerQuestion.includes("timeout") || lowerQuestion.includes("fail")
-    ? "High"
-    : lowerQuestion.includes("defect") || lowerQuestion.includes("bug")
-      ? "Medium"
-      : "Normal";
-
+function renderAnswer(result) {
   return `
-    <h4>${escapeHtml(state.protocol)} guidance</h4>
-    <p><strong>Question:</strong> ${escapeHtml(question)}</p>
-    <p>Focus this investigation on ${profile.focus}. Current triage risk: <strong>${risk}</strong>.</p>
+    <h4>${escapeHtml(result.protocol)} guidance</h4>
+    <p><strong>Question:</strong> ${escapeHtml(result.question)}</p>
+    <p>${escapeHtml(result.guidance)}</p>
     <h4>Recommended checks</h4>
-    <ul>${profile.checks.map((check) => `<li>${escapeHtml(check)}</li>`).join("")}</ul>
+    ${renderList(result.recommended_checks)}
     <h4>Evidence to capture</h4>
-    <ul>${profile.evidence.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
-    <p class="note">If the issue is intermittent, run the same scenario at least twice and compare timestamps before changing the test setup.</p>
+    ${renderList(result.evidence_to_capture)}
+    <p class="note">${escapeHtml(result.note)}</p>
   `;
 }
 
-function analyzeLog(logText) {
-  const lines = logText.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-  const errorLines = lines.filter((line) => /error|fail|timeout|reject|invalid/i.test(line));
-  const warningLines = lines.filter((line) => /warn|retry|slow|delay/i.test(line));
-  const transactionIds = new Set();
-
-  lines.forEach((line) => {
-    const matches = line.match(/\b(?:txn|transaction|session|device)[=: -]?([A-Za-z0-9_-]+)/gi) || [];
-    matches.forEach((match) => transactionIds.add(match));
-  });
-
-  const profile = protocolProfiles[state.protocol];
-  const severity = errorLines.length > 0 ? "High" : warningLines.length > 0 ? "Medium" : "Low";
-  const summary = `${lines.length} lines scanned, ${errorLines.length} errors, ${warningLines.length} warnings, severity ${severity}.`;
-  state.lastLogSummary = summary;
-  localStorage.setItem("aiqa-last-log-summary", summary);
+function renderLogAnalysis(result) {
+  state.lastLogSummary = result.summary;
   renderProtocol();
 
   return `
     <h4>Scan summary</h4>
     <div class="metric-row">
-      <span><strong>${lines.length}</strong> lines</span>
-      <span><strong>${errorLines.length}</strong> errors</span>
-      <span><strong>${warningLines.length}</strong> warnings</span>
-      <span><strong>${severity}</strong> severity</span>
+      <span><strong>${result.line_count}</strong> lines</span>
+      <span><strong>${result.error_count}</strong> errors</span>
+      <span><strong>${result.warning_count}</strong> warnings</span>
+      <span><strong>${escapeHtml(result.severity)}</strong> severity</span>
     </div>
     <h4>Likely risk areas</h4>
-    <ul>
-      <li>${escapeHtml(profile.focus)}</li>
-      <li>${transactionIds.size ? `${transactionIds.size} identifiers found for correlation.` : "No explicit transaction or session identifiers found."}</li>
-      <li>${errorLines.length ? "Prioritize the first error before later cascading failures." : "No hard error markers found; inspect timing and state transitions."}</li>
-    </ul>
+    ${renderList(result.risk_areas)}
     <h4>Flagged lines</h4>
     ${
-      errorLines.concat(warningLines).slice(0, 8).length
-        ? `<pre>${escapeHtml(errorLines.concat(warningLines).slice(0, 8).join("\n"))}</pre>`
+      result.flagged_lines.length
+        ? `<pre>${escapeHtml(result.flagged_lines.join("\n"))}</pre>`
         : "<p>No obvious error or warning markers detected.</p>"
     }
     <h4>Next actions</h4>
-    <ul>${profile.checks.map((check) => `<li>${escapeHtml(check)}</li>`).join("")}</ul>
+    ${renderList(result.next_actions)}
   `;
 }
 
-function draftDefect(summary, notes) {
-  const profile = protocolProfiles[state.protocol];
-  const title = summary || `${state.protocol} protocol behavior differs from expected result`;
-
+function renderDefect(result) {
   return `
-    <h4>${escapeHtml(title)}</h4>
-    <p><strong>Protocol:</strong> ${escapeHtml(state.protocol)}</p>
-    <p><strong>Impact:</strong> Test execution may produce inconsistent certification evidence until the behavior is explained or corrected.</p>
+    <h4>${escapeHtml(result.title)}</h4>
+    <p><strong>Protocol:</strong> ${escapeHtml(result.protocol)}</p>
+    <p><strong>Impact:</strong> ${escapeHtml(result.impact)}</p>
     <h4>Steps to reproduce</h4>
-    <ol>
-      <li>Configure the test environment for ${escapeHtml(state.protocol)} validation.</li>
-      <li>Run the scenario using the same device, host, and test data captured in the notes.</li>
-      <li>Observe the response, timing, and state transitions around the failure point.</li>
-    </ol>
+    <ol>${result.steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ol>
     <h4>Expected result</h4>
-    <p>The protocol exchange completes according to the specification and produces consistent acknowledgements, timing, and state updates.</p>
+    <p>${escapeHtml(result.expected_result)}</p>
     <h4>Actual result</h4>
-    <p>${escapeHtml(notes || "Actual result not provided. Add log excerpts and observed behavior before filing.")}</p>
+    <p>${escapeHtml(result.actual_result)}</p>
     <h4>Required evidence</h4>
-    <ul>${profile.evidence.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+    ${renderList(result.required_evidence)}
   `;
 }
 
-document.getElementById("signInButton").addEventListener("click", () => {
-  state.signedIn = true;
-  localStorage.setItem("aiqa-signed-in", "true");
-  renderAuth();
-});
+function renderHistory(history) {
+  const output = document.getElementById("historyOutput");
+  if (!history.length) {
+    output.classList.add("empty");
+    output.textContent = "No application activity yet. Sign in and use the assistants to build a session history.";
+    return;
+  }
 
-document.getElementById("signOutButton").addEventListener("click", () => {
-  state.signedIn = false;
-  localStorage.removeItem("aiqa-signed-in");
-  renderAuth();
-});
+  output.classList.remove("empty");
+  output.innerHTML = history
+    .slice()
+    .reverse()
+    .map((entry) => `
+      <article class="history-item">
+        <strong>${escapeHtml(entry.type)}</strong>
+        <span>${escapeHtml(entry.created_at)}</span>
+        <p>${escapeHtml(entry.summary)}</p>
+      </article>
+    `)
+    .join("");
+}
 
-protocolSelect.addEventListener("change", (event) => {
-  state.protocol = event.target.value;
-  localStorage.setItem("aiqa-protocol", state.protocol);
+async function refreshSession() {
+  const session = await api("/api/session");
+  state.signedIn = session.signed_in;
+  state.user = session.user;
+  state.protocol = session.protocol;
+  state.lastLogSummary = session.last_log_summary || "";
+  renderAuth();
   renderProtocol();
+  renderHistory(session.history || []);
+}
+
+document.getElementById("signInButton").addEventListener("click", async () => {
+  await api("/api/sign-in", {
+    method: "POST",
+    body: JSON.stringify({ name: document.getElementById("displayNameInput").value.trim() || "QA Tester" })
+  });
+  await refreshSession();
+});
+
+document.getElementById("signOutButton").addEventListener("click", async () => {
+  await api("/api/sign-out", { method: "POST", body: "{}" });
+  await refreshSession();
+});
+
+protocolSelect.addEventListener("change", async (event) => {
+  state.protocol = event.target.value;
+  renderProtocol();
+  await api("/api/protocol", {
+    method: "POST",
+    body: JSON.stringify({ protocol: state.protocol })
+  });
+  await refreshSession();
 });
 
 document.querySelectorAll("[data-question]").forEach((button) => {
@@ -182,30 +178,48 @@ document.querySelectorAll("[data-question]").forEach((button) => {
   });
 });
 
-document.getElementById("questionForm").addEventListener("submit", (event) => {
+document.getElementById("questionForm").addEventListener("submit", async (event) => {
   event.preventDefault();
   const question = document.getElementById("questionInput").value.trim();
   if (!question) return;
-  setOutput(document.getElementById("answerOutput"), buildAnswer(question));
+  const result = await api("/api/ask", {
+    method: "POST",
+    body: JSON.stringify({ question })
+  });
+  setOutput(document.getElementById("answerOutput"), renderAnswer(result));
+  renderHistory(result.history || []);
 });
 
-document.getElementById("logForm").addEventListener("submit", (event) => {
+document.getElementById("logForm").addEventListener("submit", async (event) => {
   event.preventDefault();
   const logText = document.getElementById("logInput").value.trim();
   if (!logText) return;
-  setOutput(document.getElementById("logOutput"), analyzeLog(logText));
+  const result = await api("/api/analyze-log", {
+    method: "POST",
+    body: JSON.stringify({ log: logText })
+  });
+  setOutput(document.getElementById("logOutput"), renderLogAnalysis(result));
+  renderHistory(result.history || []);
 });
 
-document.getElementById("defectForm").addEventListener("submit", (event) => {
+document.getElementById("defectForm").addEventListener("submit", async (event) => {
   event.preventDefault();
   const summary = document.getElementById("defectSummary").value.trim();
   const notes = document.getElementById("defectNotes").value.trim();
   if (!summary && !notes) return;
-  setOutput(document.getElementById("defectOutput"), draftDefect(summary, notes));
+  const result = await api("/api/draft-defect", {
+    method: "POST",
+    body: JSON.stringify({ summary, notes })
+  });
+  setOutput(document.getElementById("defectOutput"), renderDefect(result));
+  renderHistory(result.history || []);
 });
 
 window.addEventListener("hashchange", () => routeTo(window.location.hash));
 
-renderAuth();
-renderProtocol();
+refreshSession().catch((error) => {
+  console.error(error);
+  renderAuth();
+  renderProtocol();
+});
 routeTo(window.location.hash);

@@ -422,6 +422,42 @@ textarea:focus {
   margin-bottom: 1rem;
 }
 
+.auth-name {
+  display: block;
+  margin: 1rem 0 0.35rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-align: left;
+}
+
+.history-panel {
+  margin-top: 1.5rem;
+}
+
+.history-list {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.history-item {
+  padding: 0.85rem;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 0.85rem;
+}
+
+.history-item span {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.history-item p {
+  margin-bottom: 0;
+}
+
 .auth-screen {
   position: fixed;
   inset: 0;

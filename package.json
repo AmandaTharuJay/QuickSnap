@@ -1,7 +1,7 @@
 {
   "name": "ai-qa-assistant-static",
   "version": "1.0.0",
-  "description": "Static AI QA Assistant dashboard prototype with protocol chat, log analysis, and defect drafting.",
+  "description": "AI QA Assistant application with session-backed protocol chat, log analysis, and defect drafting.",
   "private": true,
   "scripts": {
     "start": "python3 scripts/serve.py",

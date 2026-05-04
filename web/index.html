@@ -34,6 +34,9 @@
           <a class="nav-link" href="#defect-writer" data-nav="defect-writer">
             <span>Defect Writer</span>
           </a>
+          <a class="nav-link" href="#session-history" data-nav="session-history">
+            <span>Session History</span>
+          </a>
         </nav>
 
         <div class="sidebar-card">
@@ -60,6 +63,7 @@
                 <option value="All Protocols">All Protocols</option>
               </select>
             </label>
+            <span class="user-chip" id="userChip" hidden></span>
             <button class="button ghost" id="signOutButton" type="button">Sign out</button>
           </div>
         </header>
@@ -206,6 +210,23 @@
             </div>
           </article>
         </section>
+
+        <section class="view" id="session-history" aria-labelledby="historyTitle">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Persisted application activity</p>
+              <h2 id="historyTitle">Session History</h2>
+            </div>
+            <span class="pill">Stored on the local backend</span>
+          </div>
+
+          <article class="panel answer-panel" aria-live="polite">
+            <h3>Recent activity</h3>
+            <div id="historyOutput" class="output empty">
+              No application activity yet. Sign in and use the assistants to build a session history.
+            </div>
+          </article>
+        </section>
       </main>
     </div>
 
@@ -215,6 +236,8 @@
         <p class="eyebrow">AI QA Assistant</p>
         <h2 id="authTitle">Sign in to continue</h2>
         <p>Access to this dashboard requires authentication. Continue to launch the login flow.</p>
+        <label class="auth-name" for="displayNameInput">Display name</label>
+        <input id="displayNameInput" type="text" value="QA Tester" autocomplete="name">
         <button class="button primary" id="signInButton" type="button">Sign in</button>
       </div>
     </div>

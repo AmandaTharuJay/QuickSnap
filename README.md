@@ -2,17 +2,18 @@
 
 A two player version of the classic Snap card game... hit when the rank of the top cards match.
 
-## AI QA Assistant website
+## AI QA Assistant application
 
-This repository also includes a standalone static prototype for an AI QA Assistant dashboard.
+This repository also includes a standalone AI QA Assistant application. It serves a browser UI and a Python backend that owns sign-in sessions, selected protocol, activity history, protocol answers, log analysis, and defect drafting.
 
 Features:
 
-- Sign-in gated dashboard experience
+- Session-based sign-in gate
 - Protocol selector for QCOM, SAS, ASP, X-Series, and all-protocol guidance
-- Protocol question assistant with suggested prompts
-- Protocol log analyzer for errors, warnings, identifiers, and next actions
-- Defect documentation assistant that drafts reproducible bug reports
+- Protocol question assistant backed by `/api/ask`
+- Protocol log analyzer backed by `/api/analyze-log`
+- Defect documentation assistant backed by `/api/draft-defect`
+- Local JSON session persistence in `data/sessions.json`
 
 Run it locally:
 
@@ -20,7 +21,7 @@ Run it locally:
 python3 scripts/serve.py
 ```
 
-Validate the static website files:
+Validate the application files and QA engine behavior:
 
 ```sh
 python3 scripts/validate_static.py

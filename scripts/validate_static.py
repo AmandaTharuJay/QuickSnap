@@ -1,3 +1,5 @@
+import py_compile
+import sys
 from html.parser import HTMLParser
 from pathlib import Path
 
@@ -5,6 +7,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 WEB_ROOT = ROOT / "web"
 REQUIRED_FILES = ["index.html", "styles.css", "app.js"]
+PYTHON_FILES = ["app/qa_engine.py", "scripts/serve.py"]
 
 
 class AssetParser(HTMLParser):
@@ -55,13 +58,34 @@ def assert_html_assets():
 
 def assert_app_markers():
     script = (WEB_ROOT / "app.js").read_text(encoding="utf-8")
-    for marker in ("protocolProfiles", "analyzeLog", "draftDefect", "renderAuth"):
+    for marker in ('"/api/session"', '"/api/ask"', '"/api/analyze-log"', '"/api/draft-defect"'):
         if marker not in script:
             raise AssertionError(f"app.js is missing expected behavior: {marker}")
+
+
+def assert_python_application():
+    sys.path.insert(0, str(ROOT))
+    for filename in PYTHON_FILES:
+        py_compile.compile(str(ROOT / filename), doraise=True)
+
+    from app.qa_engine import analyze_log, answer_question, draft_defect
+
+    answer = answer_question("QCOM", "How should I triage a timeout?")
+    if answer["risk"] != "High" or not answer["recommended_checks"]:
+        raise AssertionError("Question API engine did not produce expected guidance")
+
+    analysis = analyze_log("QCOM", "AUTH approved txn=42\nERROR timeout txn=42")
+    if analysis["severity"] != "High" or analysis["error_count"] != 1:
+        raise AssertionError("Log analyzer did not detect high severity timeout")
+
+    defect = draft_defect("SAS", "Meter mismatch", "Actual meter delta is wrong")
+    if defect["protocol"] != "SAS" or not defect["steps"]:
+        raise AssertionError("Defect drafter did not produce a structured defect")
 
 
 if __name__ == "__main__":
     assert_required_files()
     assert_html_assets()
     assert_app_markers()
-    print("Static website validation passed.")
+    assert_python_application()
+    print("AI QA Assistant application validation passed.")
