@@ -3,6 +3,7 @@ tmp
 __pycache__
 *.pyc
 .venv
+*.egg-info
 *.userprefs
 out.log
 .DS_Store
