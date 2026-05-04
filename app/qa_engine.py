@@ -142,6 +142,7 @@ def answer_question(protocol: str, question: str, documents: list[dict[str, Any]
         "evidence_to_capture": profile["evidence"],
         "knowledge_hits": knowledge_hits,
         "knowledge_matches": knowledge_matches,
+        "source_matches": knowledge_matches,
         "follow_up_questions": [
             f"What raw {selected} evidence proves the expected behavior?",
             "Which timestamp or state transition is the first point of divergence?",

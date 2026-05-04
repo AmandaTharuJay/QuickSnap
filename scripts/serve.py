@@ -77,6 +77,15 @@ def session_payload(session):
             }
             for document in knowledge_base
         ],
+        "documents": [
+            {
+                "id": document.get("id", ""),
+                "title": document.get("title", "Untitled document"),
+                "protocol": document.get("protocol", DEFAULT_PROTOCOL),
+                "created_at": document.get("created_at", ""),
+            }
+            for document in knowledge_base
+        ],
         "stats": {
             "questions": sum(1 for entry in history if entry.get("type") == "question"),
             "log_analyses": sum(1 for entry in history if entry.get("type") == "log"),
@@ -159,7 +168,7 @@ class ApplicationHandler(SimpleHTTPRequestHandler):
             self.write_json(session_payload(session))
             return
 
-        if path == "/api/knowledge":
+        if path in ("/api/knowledge", "/api/documents"):
             _, session = self.current_session()
             if not session:
                 self.write_json({"error": "Authentication required"}, HTTPStatus.UNAUTHORIZED)
@@ -219,7 +228,7 @@ class ApplicationHandler(SimpleHTTPRequestHandler):
                 self.write_json(session_payload(session))
                 return
 
-            if path == "/api/knowledge":
+            if path in ("/api/knowledge", "/api/documents"):
                 title = str(payload.get("title", "")).strip()
                 content = str(payload.get("content", "")).strip()
                 if not title or not content:
@@ -248,6 +257,7 @@ class ApplicationHandler(SimpleHTTPRequestHandler):
             if path == "/api/clear-history":
                 session["history"] = []
                 session["lastLogSummary"] = ""
+                session["knowledgeBase"] = []
                 sessions[session_id] = session
                 save_sessions(sessions)
                 self.write_json(session_payload(session))
