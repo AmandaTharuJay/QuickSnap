@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta
+      name="description"
+      content="AI QA Assistant dashboard for protocol questions, protocol log analysis, and defect documentation."
+    >
+    <title>AI QA Assistant</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Primary navigation">
+        <a class="brand" href="#dashboard" aria-label="AI QA Assistant home">
+          <span class="brand-mark">QA</span>
+          <span>
+            <strong>AI QA Assistant</strong>
+            <small>Protocol intelligence</small>
+          </span>
+        </a>
+
+        <nav class="nav-list">
+          <a class="nav-link active" href="#dashboard" data-nav="dashboard">
+            <span>Dashboard</span>
+          </a>
+          <a class="nav-link" href="#protocol-chat" data-nav="protocol-chat">
+            <span>Protocol Chat</span>
+          </a>
+          <a class="nav-link" href="#log-analyzer" data-nav="log-analyzer">
+            <span>Log Analyzer</span>
+          </a>
+          <a class="nav-link" href="#defect-writer" data-nav="defect-writer">
+            <span>Defect Writer</span>
+          </a>
+        </nav>
+
+        <div class="sidebar-card">
+          <span class="eyebrow">Current Protocol</span>
+          <strong id="sidebarProtocol">QCOM</strong>
+          <p>Answers are scoped to your selected protocol and uploaded log context.</p>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Data-aware documentation assistant</p>
+            <h1>AI QA Assistant</h1>
+          </div>
+          <div class="topbar-actions">
+            <label class="protocol-picker">
+              <span>Protocol</span>
+              <select id="protocolSelect">
+                <option value="QCOM">QCOM</option>
+                <option value="SAS">SAS</option>
+                <option value="ASP">ASP</option>
+                <option value="X-Series">X-Series</option>
+                <option value="All Protocols">All Protocols</option>
+              </select>
+            </label>
+            <button class="button ghost" id="signOutButton" type="button">Sign out</button>
+          </div>
+        </header>
+
+        <section class="view active" id="dashboard" aria-labelledby="dashboardTitle">
+          <div class="hero-card">
+            <div>
+              <p class="eyebrow">QA knowledge, grounded in real data</p>
+              <h2 id="dashboardTitle">Ask protocol questions, analyze logs, and document defects faster.</h2>
+              <p>
+                Choose QCOM, SAS, ASP, or X-Series protocols and work through testing sessions with
+                consistent guidance, reproducible evidence, and exportable summaries.
+              </p>
+              <div class="hero-actions">
+                <a class="button primary" href="#protocol-chat">Ask a question</a>
+                <a class="button secondary" href="#log-analyzer">Analyze protocol log</a>
+              </div>
+            </div>
+            <div class="status-panel" aria-label="Testing session summary">
+              <span class="status-dot"></span>
+              <strong>Session ready</strong>
+              <p id="sessionSummary">No uploaded logs yet. Paste a log to enable data-aware analysis.</p>
+            </div>
+          </div>
+
+          <div class="feature-grid">
+            <article class="feature-card">
+              <span class="icon">?</span>
+              <h3>Protocol Documentation Assistant</h3>
+              <p>Get answers about QCOM, SAS, ASP, and X-Series protocols with suggested QA follow-ups.</p>
+              <a href="#protocol-chat">Open chat</a>
+            </article>
+            <article class="feature-card">
+              <span class="icon">!</span>
+              <h3>Analyze Protocol Log</h3>
+              <p>Paste test logs and receive anomalies, likely violations, and recommended next checks.</p>
+              <a href="#log-analyzer">Analyze logs</a>
+            </article>
+            <article class="feature-card">
+              <span class="icon">#</span>
+              <h3>Defect Documentation</h3>
+              <p>Convert investigation notes into clear defects with reproduction steps and expected results.</p>
+              <a href="#defect-writer">Write defect</a>
+            </article>
+          </div>
+        </section>
+
+        <section class="view" id="protocol-chat" aria-labelledby="chatTitle">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">General questions</p>
+              <h2 id="chatTitle">Protocol Chat</h2>
+            </div>
+            <span class="pill">Powered by selected protocol context</span>
+          </div>
+
+          <div class="workspace-grid">
+            <form class="panel" id="questionForm">
+              <label for="questionInput">Ask a protocol question</label>
+              <textarea
+                id="questionInput"
+                rows="7"
+                placeholder="Example: What should I verify when a QCOM transaction times out after auth approval?"
+              ></textarea>
+              <div class="suggestions" aria-label="Suggested questions">
+                <button type="button" data-question="What are the highest-risk compliance checks for this protocol?">
+                  Highest-risk checks
+                </button>
+                <button type="button" data-question="How should I triage intermittent timeouts in certification logs?">
+                  Triage timeouts
+                </button>
+                <button type="button" data-question="Which fields should be captured in a reproducible defect?">
+                  Defect evidence
+                </button>
+              </div>
+              <button class="button primary" type="submit">Generate answer</button>
+            </form>
+
+            <article class="panel answer-panel" aria-live="polite">
+              <h3>Assistant answer</h3>
+              <div id="answerOutput" class="output empty">
+                Ask a question to receive protocol-specific guidance.
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="view" id="log-analyzer" aria-labelledby="logTitle">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Your uploaded logs</p>
+              <h2 id="logTitle">Analyze Protocol Log</h2>
+            </div>
+            <span class="pill">Anomaly and violation scan</span>
+          </div>
+
+          <div class="workspace-grid">
+            <form class="panel" id="logForm">
+              <label for="logInput">Paste your protocol log</label>
+              <textarea
+                id="logInput"
+                rows="12"
+                placeholder="2026-05-04T05:18:31Z AUTH approved txn=4821&#10;2026-05-04T05:18:36Z ERROR response_timeout txn=4821"
+              ></textarea>
+              <button class="button primary" type="submit">Analyze log</button>
+            </form>
+
+            <article class="panel answer-panel" aria-live="polite">
+              <h3>Analysis results</h3>
+              <div id="logOutput" class="output empty">
+                Paste log lines to detect errors, warnings, timing gaps, and protocol-specific risks.
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="view" id="defect-writer" aria-labelledby="defectTitle">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Document a defect found during testing</p>
+              <h2 id="defectTitle">Defect Documentation Assistant</h2>
+            </div>
+            <span class="pill">Reproducible bug report</span>
+          </div>
+
+          <form class="panel defect-form" id="defectForm">
+            <label for="defectSummary">Issue summary</label>
+            <input id="defectSummary" type="text" placeholder="Terminal returns timeout after approved authorization">
+
+            <label for="defectNotes">Testing notes and evidence</label>
+            <textarea
+              id="defectNotes"
+              rows="8"
+              placeholder="Include setup, steps, log excerpts, expected behavior, and actual behavior."
+            ></textarea>
+
+            <button class="button primary" type="submit">Draft defect</button>
+          </form>
+
+          <article class="panel answer-panel defect-output-wrap" aria-live="polite">
+            <h3>Draft defect</h3>
+            <div id="defectOutput" class="output empty">
+              Add a summary and notes to generate structured reproduction steps.
+            </div>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <div class="auth-screen" id="authScreen" role="dialog" aria-labelledby="authTitle" aria-modal="true">
+      <div class="auth-card">
+        <span class="brand-mark large">QA</span>
+        <p class="eyebrow">AI QA Assistant</p>
+        <h2 id="authTitle">Sign in to continue</h2>
+        <p>Access to this dashboard requires authentication. Continue to launch the login flow.</p>
+        <button class="button primary" id="signInButton" type="button">Sign in</button>
+      </div>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
