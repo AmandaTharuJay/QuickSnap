@@ -1,0 +1,18 @@
+[project]
+name = "qa-assistant"
+version = "1.0.0"
+description = "Static + optional OpenAI QA review for the CardGames C# repository"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.scripts]
+ai-qa = "qa_assistant.__main__:run"
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["qa_assistant*"]
