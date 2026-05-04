@@ -53,10 +53,20 @@ def main():
     protocol = post("/api/protocol", {"protocol": "SAS"})
     assert protocol["protocol"] == "SAS"
 
+    document = post(
+        "/api/documents",
+        {
+            "title": "SAS timeout runbook",
+            "content": "When SAS timeout appears after approval, compare poll acknowledgements and meter deltas.",
+        },
+    )
+    assert document["documents"]
+
     answer = post("/api/ask", {"question": "How do I triage timeout failures?"})
     assert answer["type"] == "answer"
     assert answer["risk"] == "High"
     assert answer["follow_up_questions"]
+    assert answer["source_matches"]
 
     analysis = post(
         "/api/analyze-log",
@@ -76,10 +86,12 @@ def main():
     _, report = get("/api/export")
     assert "AI QA Assistant Session Report" in report
     assert "Defects drafted: 1" in report
+    assert "Knowledge documents: 1" in report
 
     cleared = post("/api/clear-history", {})
     assert cleared["history"] == []
     assert cleared["last_log_summary"] == ""
+    assert cleared["documents"] == []
 
     logout = post("/api/sign-out", {})
     assert logout["signed_in"] is False

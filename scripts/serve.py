@@ -60,12 +60,28 @@ def new_session():
 
 
 def session_payload(session):
+    history = session.get("history", [])
+    knowledge_base = session.get("knowledgeBase", [])
     return {
         "signed_in": True,
         "user": session.get("user", DEFAULT_USER),
         "protocol": session.get("protocol", DEFAULT_PROTOCOL),
         "last_log_summary": session.get("lastLogSummary", ""),
-        "history": summarize_history(session.get("history", [])),
+        "history": summarize_history(history),
+        "knowledge_sources": [
+            {
+                "id": document.get("id", ""),
+                "title": document.get("title", "Untitled document"),
+                "protocol": document.get("protocol", DEFAULT_PROTOCOL),
+                "created_at": document.get("created_at", ""),
+            }
+            for document in knowledge_base
+        ],
+        "stats": {
+            "questions": sum(1 for entry in history if entry.get("type") == "question"),
+            "log_analyses": sum(1 for entry in history if entry.get("type") == "log"),
+            "defects": sum(1 for entry in history if entry.get("type") == "defect"),
+        },
     }
 
 
@@ -143,6 +159,14 @@ class ApplicationHandler(SimpleHTTPRequestHandler):
             self.write_json(session_payload(session))
             return
 
+        if path == "/api/knowledge":
+            _, session = self.current_session()
+            if not session:
+                self.write_json({"error": "Authentication required"}, HTTPStatus.UNAUTHORIZED)
+                return
+            self.write_json({"documents": session_payload(session)["knowledge_sources"]})
+            return
+
         if path == "/api/export":
             _, session = self.current_session()
             if not session:
@@ -195,6 +219,32 @@ class ApplicationHandler(SimpleHTTPRequestHandler):
                 self.write_json(session_payload(session))
                 return
 
+            if path == "/api/knowledge":
+                title = str(payload.get("title", "")).strip()
+                content = str(payload.get("content", "")).strip()
+                if not title or not content:
+                    raise ValueError("Knowledge title and content are required")
+                document = {
+                    "id": secrets.token_urlsafe(12),
+                    "title": title,
+                    "content": content,
+                    "protocol": session.get("protocol", DEFAULT_PROTOCOL),
+                    "created_at": int(time.time()),
+                }
+                session.setdefault("knowledgeBase", []).append(document)
+                session["knowledgeBase"] = session.get("knowledgeBase", [])[-25:]
+                sessions[session_id] = session
+                save_sessions(sessions)
+                self.write_json({"document": document, "documents": session["knowledgeBase"]})
+                return
+
+            if path == "/api/knowledge/clear":
+                session["knowledgeBase"] = []
+                sessions[session_id] = session
+                save_sessions(sessions)
+                self.write_json(session_payload(session))
+                return
+
             if path == "/api/clear-history":
                 session["history"] = []
                 session["lastLogSummary"] = ""
@@ -204,7 +254,11 @@ class ApplicationHandler(SimpleHTTPRequestHandler):
                 return
 
             if path == "/api/ask":
-                result = answer_question(session.get("protocol", DEFAULT_PROTOCOL), payload.get("question", ""))
+                result = answer_question(
+                    session.get("protocol", DEFAULT_PROTOCOL),
+                    payload.get("question", ""),
+                    session.get("knowledgeBase", []),
+                )
                 session.setdefault("history", []).append({"type": "question", "result": result})
             elif path == "/api/analyze-log":
                 result = analyze_log(session.get("protocol", DEFAULT_PROTOCOL), payload.get("log", ""))

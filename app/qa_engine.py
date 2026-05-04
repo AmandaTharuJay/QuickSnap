@@ -68,7 +68,47 @@ def now_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
 
-def answer_question(protocol: str, question: str) -> dict[str, Any]:
+def extract_knowledge_hits(question: str, documents: list[dict[str, Any]] | None) -> list[dict[str, str]]:
+    if not documents:
+        return []
+
+    terms = {
+        term.lower()
+        for term in re.findall(r"[A-Za-z0-9_-]{4,}", question)
+        if term.lower() not in {"what", "when", "with", "from", "that", "this", "should", "protocol"}
+    }
+    hits: list[dict[str, str]] = []
+    for document in documents:
+        title = str(document.get("title") or "Untitled document")
+        content = str(document.get("content") or "")
+        haystack = f"{title}\n{content}".lower()
+        if terms and not any(term in haystack for term in terms):
+            continue
+        excerpt = " ".join(content.split())[:260]
+        hits.append({
+            "title": title,
+            "excerpt": excerpt or "No document content available.",
+        })
+        if len(hits) == 3:
+            break
+    return hits
+
+
+def search_knowledge_base(
+    query: str,
+    documents: list[dict[str, Any]] | None,
+    protocol: str | None = None,
+) -> list[dict[str, str]]:
+    selected = normalize_protocol(protocol)
+    scoped_documents = [
+        document
+        for document in documents or []
+        if document.get("protocol") in (selected, "All Protocols", None)
+    ]
+    return extract_knowledge_hits(query, scoped_documents)
+
+
+def answer_question(protocol: str, question: str, documents: list[dict[str, Any]] | None = None) -> dict[str, Any]:
     selected = normalize_protocol(protocol)
     cleaned_question = question.strip()
     if not cleaned_question:
@@ -83,14 +123,25 @@ def answer_question(protocol: str, question: str) -> dict[str, Any]:
     else:
         risk = "Normal"
 
+    knowledge_hits = search_knowledge_base(cleaned_question, documents, selected)
+    knowledge_matches = [
+        f"{hit['title']}: {hit['excerpt']}"
+        for hit in knowledge_hits
+    ]
+
     return {
         "type": "answer",
         "protocol": selected,
         "question": cleaned_question,
         "risk": risk,
-        "guidance": f"Focus this investigation on {profile['focus']}.",
+        "guidance": (
+            f"Focus this investigation on {profile['focus']}. "
+            f"{'I found related knowledge-base context below.' if knowledge_hits else 'No matching knowledge-base document was found, so this answer uses protocol guidance.'}"
+        ),
         "recommended_checks": profile["checks"],
         "evidence_to_capture": profile["evidence"],
+        "knowledge_hits": knowledge_hits,
+        "knowledge_matches": knowledge_matches,
         "follow_up_questions": [
             f"What raw {selected} evidence proves the expected behavior?",
             "Which timestamp or state transition is the first point of divergence?",
@@ -223,6 +274,7 @@ def summarize_history(history: list[dict[str, Any]]) -> list[dict[str, str]]:
 
 def generate_session_report(session: dict[str, Any]) -> dict[str, Any]:
     history = session.get("history", [])
+    documents = session.get("knowledgeBase", session.get("documents", []))
     summarized = summarize_history(history)
     protocol = normalize_protocol(session.get("protocol"))
     user = session.get("user", "QA Tester")
@@ -247,6 +299,7 @@ def generate_session_report(session: dict[str, Any]) -> dict[str, Any]:
         f"- Questions answered: {counts['questions']}",
         f"- Logs analyzed: {counts['log_analyses']}",
         f"- Defects drafted: {counts['defects']}",
+        f"- Knowledge documents: {len(documents)}",
         f"- High severity log analyses: {len(high_severity_logs)}",
         "",
         "## Recent activity",
@@ -263,6 +316,7 @@ def generate_session_report(session: dict[str, Any]) -> dict[str, Any]:
         "protocol": protocol,
         "user": user,
         "counts": counts,
+        "document_count": len(documents),
         "high_severity_log_count": len(high_severity_logs),
         "history": summarized,
         "markdown": "\n".join(lines),

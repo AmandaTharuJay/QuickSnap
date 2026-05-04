@@ -34,6 +34,9 @@
           <a class="nav-link" href="#defect-writer" data-nav="defect-writer">
             <span>Defect Writer</span>
           </a>
+          <a class="nav-link" href="#knowledge-base" data-nav="knowledge-base">
+            <span>Knowledge Base</span>
+          </a>
           <a class="nav-link" href="#session-history" data-nav="session-history">
             <span>Session History</span>
           </a>
@@ -211,6 +214,42 @@
           </article>
         </section>
 
+        <section class="view" id="knowledge-base" aria-labelledby="knowledgeTitle">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Ground answers in your documents</p>
+              <h2 id="knowledgeTitle">Knowledge Base</h2>
+            </div>
+            <span class="pill">Session-scoped documentation</span>
+          </div>
+
+          <div class="workspace-grid">
+            <form class="panel" id="knowledgeForm">
+              <label for="knowledgeTitleInput">Document title</label>
+              <input id="knowledgeTitleInput" type="text" placeholder="QCOM timeout certification notes">
+
+              <label for="knowledgeContentInput">Document content</label>
+              <textarea
+                id="knowledgeContentInput"
+                rows="10"
+                placeholder="Paste protocol notes, expected behavior, certification rules, or QA procedures."
+              ></textarea>
+
+              <button class="button primary" type="submit">Save document</button>
+            </form>
+
+            <article class="panel answer-panel" aria-live="polite">
+              <div class="panel-title-row">
+                <h3>Saved documents</h3>
+                <button class="button ghost compact" id="clearKnowledgeButton" type="button">Clear documents</button>
+              </div>
+              <div id="knowledgeOutput" class="output empty">
+                No knowledge documents saved yet.
+              </div>
+            </article>
+          </div>
+        </section>
+
         <section class="view" id="session-history" aria-labelledby="historyTitle">
           <div class="section-heading">
             <div>
@@ -224,7 +263,7 @@
             <div class="panel-title-row">
               <h3>Recent activity</h3>
               <div class="inline-actions">
-                <button class="button secondary compact" id="exportSessionButton" type="button">Export report</button>
+                <button class="button secondary compact" id="exportReportButton" type="button">Export report</button>
                 <button class="button ghost compact" id="clearHistoryButton" type="button">Clear history</button>
               </div>
             </div>

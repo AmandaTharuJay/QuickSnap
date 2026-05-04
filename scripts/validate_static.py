@@ -63,6 +63,8 @@ def assert_app_markers():
         '"/api/ask"',
         '"/api/analyze-log"',
         '"/api/draft-defect"',
+        '"/api/knowledge"',
+        '"/api/knowledge/clear"',
         '"/api/export"',
         '"/api/clear-history"',
     ):
@@ -75,11 +77,22 @@ def assert_python_application():
     for filename in PYTHON_FILES:
         py_compile.compile(str(ROOT / filename), doraise=True)
 
-    from app.qa_engine import analyze_log, answer_question, draft_defect, generate_session_report
+    from app.qa_engine import analyze_log, answer_question, draft_defect, generate_session_report, search_knowledge_base
 
-    answer = answer_question("QCOM", "How should I triage a timeout?")
+    documents = [{
+        "title": "Timeout Runbook",
+        "content": "Timeout investigations require host timestamps and retry counters.",
+        "protocol": "QCOM",
+    }]
+    matches = search_knowledge_base("timeout", documents, "QCOM")
+    if not matches:
+        raise AssertionError("Knowledge search did not return matching documents")
+
+    answer = answer_question("QCOM", "How should I triage a timeout?", documents)
     if answer["risk"] != "High" or not answer["follow_up_questions"]:
         raise AssertionError("Question API engine did not produce expected guidance")
+    if not answer["knowledge_matches"]:
+        raise AssertionError("Question API engine did not use matching document sources")
 
     try:
         answer_question("QCOM", "")

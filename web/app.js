@@ -10,11 +10,13 @@ const protocolSelect = document.getElementById("protocolSelect");
 const sidebarProtocol = document.getElementById("sidebarProtocol");
 const sessionSummary = document.getElementById("sessionSummary");
 const userChip = document.getElementById("userChip");
-const exportReportButton = document.getElementById("exportReportButton");
+const exportReportButton = document.getElementById("exportSessionButton");
 const clearHistoryButton = document.getElementById("clearHistoryButton");
+const dashboardStats = document.getElementById("dashboardStats");
+const knowledgeSummary = document.getElementById("knowledgeSummary");
 
 function renderAuth() {
-  authScreen.classList.toggle("visible", !state.signedIn);
+  authScreen.classList.toggle("hidden", state.signedIn);
 }
 
 function renderProtocol() {
@@ -23,6 +25,18 @@ function renderProtocol() {
   sessionSummary.textContent = state.lastLogSummary || "No uploaded logs yet. Paste a log to enable data-aware analysis.";
   userChip.hidden = !state.signedIn;
   userChip.textContent = state.user ? `Signed in as ${state.user}` : "";
+}
+
+function renderDashboardStats(stats = {}, knowledgeCount = 0) {
+  dashboardStats.innerHTML = `
+    <span><strong>${stats.questions || 0}</strong> questions</span>
+    <span><strong>${stats.log_analyses || 0}</strong> logs</span>
+    <span><strong>${stats.defects || 0}</strong> defects</span>
+    <span><strong>${knowledgeCount}</strong> docs</span>
+  `;
+  knowledgeSummary.textContent = knowledgeCount
+    ? `${knowledgeCount} knowledge source${knowledgeCount === 1 ? "" : "s"} available for grounded answers.`
+    : "No knowledge sources yet. Add protocol notes to ground future answers.";
 }
 
 function setOutput(element, html) {
@@ -72,10 +86,13 @@ function renderAnswer(result) {
     <h4>${escapeHtml(result.protocol)} guidance</h4>
     <p><strong>Question:</strong> ${escapeHtml(result.question)}</p>
     <p>${escapeHtml(result.guidance)}</p>
+    ${result.knowledge_hits.length ? `<h4>Knowledge matches</h4>${renderList(result.knowledge_hits.map((source) => `${source.title}: ${source.excerpt}`))}` : ""}
     <h4>Recommended checks</h4>
     ${renderList(result.recommended_checks)}
     <h4>Evidence to capture</h4>
     ${renderList(result.evidence_to_capture)}
+    <h4>Follow-up questions</h4>
+    ${renderList(result.follow_up_questions)}
     <p class="note">${escapeHtml(result.note)}</p>
   `;
 }
@@ -146,6 +163,26 @@ function renderHistory(history) {
     .join("");
 }
 
+function renderKnowledge(sources) {
+  const output = document.getElementById("knowledgeOutput");
+  if (!sources.length) {
+    output.classList.add("empty");
+    output.textContent = "No knowledge sources yet. Add protocol notes or pasted documentation to improve answers.";
+    return;
+  }
+
+  output.classList.remove("empty");
+  output.innerHTML = sources
+    .map((source) => `
+      <article class="history-item">
+        <strong>${escapeHtml(source.title)}</strong>
+        <span>${escapeHtml(source.protocol)} - ${escapeHtml(source.created_at)}</span>
+        <p>${escapeHtml(source.excerpt)}</p>
+      </article>
+    `)
+    .join("");
+}
+
 async function refreshSession() {
   const session = await api("/api/session");
   state.signedIn = session.signed_in;
@@ -155,6 +192,8 @@ async function refreshSession() {
   renderAuth();
   renderProtocol();
   renderHistory(session.history || []);
+  renderKnowledge(session.knowledge_sources || []);
+  renderDashboardStats(session.stats || {}, (session.knowledge_sources || []).length);
 }
 
 document.getElementById("signInButton").addEventListener("click", async () => {
@@ -177,6 +216,25 @@ clearHistoryButton.addEventListener("click", async () => {
 
 exportReportButton.addEventListener("click", () => {
   window.location.href = "/api/export";
+});
+
+document.getElementById("knowledgeForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const title = document.getElementById("knowledgeTitle").value.trim();
+  const content = document.getElementById("knowledgeContent").value.trim();
+  if (!title || !content) return;
+  await api("/api/knowledge", {
+    method: "POST",
+    body: JSON.stringify({ title, content })
+  });
+  document.getElementById("knowledgeTitle").value = "";
+  document.getElementById("knowledgeContent").value = "";
+  await refreshSession();
+});
+
+document.getElementById("clearKnowledgeButton").addEventListener("click", async () => {
+  await api("/api/knowledge/clear", { method: "POST", body: "{}" });
+  await refreshSession();
 });
 
 protocolSelect.addEventListener("change", async (event) => {

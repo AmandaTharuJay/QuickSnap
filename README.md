@@ -11,6 +11,7 @@ Features:
 - Session-based sign-in gate
 - Protocol selector for QCOM, SAS, ASP, X-Series, and all-protocol guidance
 - Protocol question assistant backed by `/api/ask`
+- Knowledge-base document ingestion backed by `/api/knowledge`
 - Protocol log analyzer backed by `/api/analyze-log`
 - Defect documentation assistant backed by `/api/draft-defect`
 - Markdown session report export backed by `/api/export`

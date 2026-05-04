@@ -318,6 +318,26 @@ textarea:focus {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.metric-card {
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(219, 228, 240, 0.94);
+  border-radius: 1.15rem;
+}
+
+.metric-card strong {
+  display: block;
+  margin-bottom: 0.2rem;
+  font-size: 1.8rem;
+}
+
 .feature-card,
 .panel {
   padding: 1.25rem;
@@ -388,6 +408,11 @@ textarea:focus {
   border: 0;
   border-radius: 999px;
   cursor: pointer;
+}
+
+.knowledge-count {
+  color: var(--muted);
+  font-weight: 800;
 }
 
 .output {
@@ -471,6 +496,23 @@ textarea:focus {
   margin-bottom: 0;
 }
 
+.knowledge-item {
+  padding: 0.85rem;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 0.85rem;
+}
+
+.knowledge-item h4,
+.knowledge-item p {
+  margin: 0;
+}
+
+.knowledge-item span {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
 .report-actions {
   display: flex;
   flex-wrap: wrap;
@@ -490,7 +532,8 @@ textarea:focus {
   z-index: 10;
 }
 
-.auth-screen.hidden {
+.auth-screen.hidden,
+.auth-screen:not(.visible) {
   display: none;
 }
 
