@@ -89,6 +89,11 @@ def answer_question(protocol: str, question: str) -> dict[str, Any]:
         "guidance": f"Focus this investigation on {profile['focus']}.",
         "recommended_checks": profile["checks"],
         "evidence_to_capture": profile["evidence"],
+        "follow_up_questions": [
+            f"What raw {selected} evidence proves the expected behavior?",
+            "Which timestamp or state transition is the first point of divergence?",
+            "Can the same result be reproduced with the same setup and test data?",
+        ],
         "note": (
             "If the issue is intermittent, run the same scenario at least twice "
             "and compare timestamps before changing the test setup."
@@ -125,6 +130,7 @@ def analyze_log(protocol: str, log_text: str) -> dict[str, Any]:
         "severity": severity,
         "identifiers": sorted(identifiers),
         "flagged_lines": (error_lines + warning_lines)[:8],
+        "timeline": lines[:12],
         "risk_areas": [
             profile["focus"],
             (
@@ -167,8 +173,19 @@ def draft_defect(protocol: str, summary: str, notes: str) -> dict[str, Any]:
             "The protocol exchange completes according to the specification and produces "
             "consistent acknowledgements, timing, and state updates."
         ),
+        "expected_result": (
+            "The protocol exchange completes according to the specification and produces "
+            "consistent acknowledgements, timing, and state updates."
+        ),
         "actual": cleaned_notes or "Actual result not provided. Add log excerpts and observed behavior before filing.",
+        "actual_result": cleaned_notes or "Actual result not provided. Add log excerpts and observed behavior before filing.",
         "evidence": profile["evidence"],
+        "required_evidence": profile["evidence"],
+        "acceptance_criteria": [
+            "The defect includes environment, protocol, and test data details.",
+            "The reproduction steps can be followed by another QA engineer.",
+            "Expected and actual results are supported by log evidence.",
+        ],
         "created_at": now_iso(),
     }
 
@@ -196,3 +213,52 @@ def summarize_history(history: list[dict[str, Any]]) -> list[dict[str, str]]:
         history_entry(entry.get("type", "activity"), entry.get("result", {}))
         for entry in history[-10:]
     ]
+
+
+def generate_session_report(session: dict[str, Any]) -> dict[str, Any]:
+    history = session.get("history", [])
+    summarized = summarize_history(history)
+    protocol = normalize_protocol(session.get("protocol"))
+    user = session.get("user", "QA Tester")
+
+    counts = {
+        "questions": sum(1 for entry in history if entry.get("type") == "question"),
+        "log_analyses": sum(1 for entry in history if entry.get("type") == "log"),
+        "defects": sum(1 for entry in history if entry.get("type") == "defect"),
+    }
+    high_severity_logs = [
+        entry["result"]
+        for entry in history
+        if entry.get("type") == "log" and entry.get("result", {}).get("severity") == "High"
+    ]
+
+    lines = [
+        "# AI QA Assistant Session Report",
+        "",
+        f"- User: {user}",
+        f"- Current protocol: {protocol}",
+        f"- Generated at: {now_iso()}",
+        f"- Questions answered: {counts['questions']}",
+        f"- Logs analyzed: {counts['log_analyses']}",
+        f"- Defects drafted: {counts['defects']}",
+        f"- High severity log analyses: {len(high_severity_logs)}",
+        "",
+        "## Recent activity",
+    ]
+
+    if summarized:
+        for entry in summarized:
+            lines.append(f"- {entry['created_at']} [{entry['type']}] {entry['summary']}")
+    else:
+        lines.append("- No activity recorded yet.")
+
+    return {
+        "type": "session-report",
+        "protocol": protocol,
+        "user": user,
+        "counts": counts,
+        "high_severity_log_count": len(high_severity_logs),
+        "history": summarized,
+        "markdown": "\n".join(lines),
+        "created_at": now_iso(),
+    }

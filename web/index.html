@@ -221,9 +221,18 @@
           </div>
 
           <article class="panel answer-panel" aria-live="polite">
-            <h3>Recent activity</h3>
+            <div class="panel-title-row">
+              <h3>Recent activity</h3>
+              <div class="inline-actions">
+                <button class="button secondary compact" id="exportSessionButton" type="button">Export report</button>
+                <button class="button ghost compact" id="clearHistoryButton" type="button">Clear history</button>
+              </div>
+            </div>
             <div id="historyOutput" class="output empty">
               No application activity yet. Sign in and use the assistants to build a session history.
+            </div>
+            <div id="reportOutput" class="output empty report-output">
+              Export a session report to generate a Markdown summary.
             </div>
           </article>
         </section>

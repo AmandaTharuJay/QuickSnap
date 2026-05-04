@@ -58,7 +58,14 @@ def assert_html_assets():
 
 def assert_app_markers():
     script = (WEB_ROOT / "app.js").read_text(encoding="utf-8")
-    for marker in ('"/api/session"', '"/api/ask"', '"/api/analyze-log"', '"/api/draft-defect"'):
+    for marker in (
+        '"/api/session"',
+        '"/api/ask"',
+        '"/api/analyze-log"',
+        '"/api/draft-defect"',
+        '"/api/export"',
+        '"/api/clear-history"',
+    ):
         if marker not in script:
             raise AssertionError(f"app.js is missing expected behavior: {marker}")
 
@@ -68,19 +75,27 @@ def assert_python_application():
     for filename in PYTHON_FILES:
         py_compile.compile(str(ROOT / filename), doraise=True)
 
-    from app.qa_engine import analyze_log, answer_question, draft_defect
+    from app.qa_engine import analyze_log, answer_question, draft_defect, generate_session_report
 
     answer = answer_question("QCOM", "How should I triage a timeout?")
-    if answer["risk"] != "High" or not answer["recommended_checks"]:
+    if answer["risk"] != "High" or not answer["follow_up_questions"]:
         raise AssertionError("Question API engine did not produce expected guidance")
 
     analysis = analyze_log("QCOM", "AUTH approved txn=42\nERROR timeout txn=42")
-    if analysis["severity"] != "High" or analysis["error_count"] != 1:
+    if analysis["severity"] != "High" or analysis["error_count"] != 1 or not analysis["timeline"]:
         raise AssertionError("Log analyzer did not detect high severity timeout")
 
     defect = draft_defect("SAS", "Meter mismatch", "Actual meter delta is wrong")
-    if defect["protocol"] != "SAS" or not defect["steps"]:
+    if defect["protocol"] != "SAS" or not defect["acceptance_criteria"]:
         raise AssertionError("Defect drafter did not produce a structured defect")
+
+    report = generate_session_report({
+        "user": "QA Tester",
+        "protocol": "SAS",
+        "history": [{"type": "defect", "result": defect}],
+    })
+    if "AI QA Assistant Session Report" not in report["markdown"] or "Meter mismatch" not in report["markdown"]:
+        raise AssertionError("Report generator did not include session results")
 
 
 if __name__ == "__main__":

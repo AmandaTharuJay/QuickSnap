@@ -9,15 +9,20 @@ const authScreen = document.getElementById("authScreen");
 const protocolSelect = document.getElementById("protocolSelect");
 const sidebarProtocol = document.getElementById("sidebarProtocol");
 const sessionSummary = document.getElementById("sessionSummary");
+const userChip = document.getElementById("userChip");
+const exportReportButton = document.getElementById("exportReportButton");
+const clearHistoryButton = document.getElementById("clearHistoryButton");
 
 function renderAuth() {
-  authScreen.classList.toggle("hidden", state.signedIn);
+  authScreen.classList.toggle("visible", !state.signedIn);
 }
 
 function renderProtocol() {
   protocolSelect.value = state.protocol;
   sidebarProtocol.textContent = state.protocol;
   sessionSummary.textContent = state.lastLogSummary || "No uploaded logs yet. Paste a log to enable data-aware analysis.";
+  userChip.hidden = !state.signedIn;
+  userChip.textContent = state.user ? `Signed in as ${state.user}` : "";
 }
 
 function setOutput(element, html) {
@@ -118,6 +123,9 @@ function renderDefect(result) {
 
 function renderHistory(history) {
   const output = document.getElementById("historyOutput");
+  exportReportButton.disabled = !history.length;
+  clearHistoryButton.disabled = !history.length;
+
   if (!history.length) {
     output.classList.add("empty");
     output.textContent = "No application activity yet. Sign in and use the assistants to build a session history.";
@@ -160,6 +168,15 @@ document.getElementById("signInButton").addEventListener("click", async () => {
 document.getElementById("signOutButton").addEventListener("click", async () => {
   await api("/api/sign-out", { method: "POST", body: "{}" });
   await refreshSession();
+});
+
+clearHistoryButton.addEventListener("click", async () => {
+  await api("/api/clear-history", { method: "POST", body: "{}" });
+  await refreshSession();
+});
+
+exportReportButton.addEventListener("click", () => {
+  window.location.href = "/api/export";
 });
 
 protocolSelect.addEventListener("change", async (event) => {

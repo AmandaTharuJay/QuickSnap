@@ -13,6 +13,8 @@ Features:
 - Protocol question assistant backed by `/api/ask`
 - Protocol log analyzer backed by `/api/analyze-log`
 - Defect documentation assistant backed by `/api/draft-defect`
+- Markdown session report export backed by `/api/export`
+- Clear-history action backed by `/api/clear-history`
 - Local JSON session persistence in `data/sessions.json`
 
 Run it locally:

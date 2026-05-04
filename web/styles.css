@@ -241,6 +241,19 @@ textarea:focus {
   border: 1px solid var(--border);
 }
 
+.button.danger {
+  color: #fff;
+  background: var(--danger);
+}
+
+.user-chip {
+  padding: 0.55rem 0.75rem;
+  color: var(--primary);
+  font-weight: 800;
+  background: var(--panel-soft);
+  border-radius: 999px;
+}
+
 .view {
   display: none;
 }
@@ -458,10 +471,16 @@ textarea:focus {
   margin-bottom: 0;
 }
 
+.report-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
 .auth-screen {
   position: fixed;
   inset: 0;
-  display: none;
+  display: grid;
   place-items: center;
   padding: 1.5rem;
   background:
@@ -471,8 +490,8 @@ textarea:focus {
   z-index: 10;
 }
 
-.auth-screen.visible {
-  display: grid;
+.auth-screen.hidden {
+  display: none;
 }
 
 .auth-card {

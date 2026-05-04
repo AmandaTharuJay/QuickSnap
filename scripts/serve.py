@@ -21,7 +21,14 @@ DEFAULT_USER = "QA Tester"
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from app.qa_engine import analyze_log, answer_question, draft_defect, summarize_history, summarize_result
+from app.qa_engine import (
+    analyze_log,
+    answer_question,
+    draft_defect,
+    generate_session_report,
+    summarize_history,
+    summarize_result,
+)
 
 
 def load_sessions():
@@ -128,15 +135,31 @@ class ApplicationHandler(SimpleHTTPRequestHandler):
         return session_id, session, sessions
 
     def handle_api_get(self, path):
+        if path == "/api/session":
+            _, session = self.current_session()
+            if not session:
+                self.write_json({"signed_in": False, "history": []})
+                return
+            self.write_json(session_payload(session))
+            return
+
+        if path == "/api/export":
+            _, session = self.current_session()
+            if not session:
+                self.write_json({"error": "Authentication required"}, HTTPStatus.UNAUTHORIZED)
+                return
+            body = generate_session_report(session)["markdown"].encode("utf-8")
+            self.send_response(HTTPStatus.OK)
+            self.send_header("Content-Type", "text/markdown; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Content-Disposition", "attachment; filename=aiqa-session-report.md")
+            self.end_headers()
+            self.wfile.write(body)
+            return
+
         if path != "/api/session":
             self.write_json({"error": "Not found"}, HTTPStatus.NOT_FOUND)
             return
-
-        _, session = self.current_session()
-        if not session:
-            self.write_json({"signed_in": False, "history": []})
-            return
-        self.write_json(session_payload(session))
 
     def handle_api_post(self, path):
         try:
@@ -167,6 +190,14 @@ class ApplicationHandler(SimpleHTTPRequestHandler):
             payload = self.read_json()
             if path == "/api/protocol":
                 session["protocol"] = payload.get("protocol") or DEFAULT_PROTOCOL
+                sessions[session_id] = session
+                save_sessions(sessions)
+                self.write_json(session_payload(session))
+                return
+
+            if path == "/api/clear-history":
+                session["history"] = []
+                session["lastLogSummary"] = ""
                 sessions[session_id] = session
                 save_sessions(sessions)
                 self.write_json(session_payload(session))
