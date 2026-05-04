@@ -6,9 +6,8 @@ from urllib.parse import urlparse
 import json
 import os
 import secrets
+import sys
 import time
-
-from app.qa_engine import analyze_log, answer_question, draft_defect, summarize_history, summarize_result
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -18,6 +17,11 @@ SESSIONS_PATH = DATA_ROOT / "sessions.json"
 PORT = int(os.environ.get("PORT", "4173"))
 DEFAULT_PROTOCOL = "QCOM"
 DEFAULT_USER = "QA Tester"
+
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from app.qa_engine import analyze_log, answer_question, draft_defect, summarize_history, summarize_result
 
 
 def load_sessions():
