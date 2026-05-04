@@ -23,7 +23,7 @@ namespace CardGames.GameLogic
 		// Use a timer to allow the game to draw cards at timed intervals
 		private readonly Timer _gameTimer;
 
-		// The amount of time that must pass before a card is flipped?
+		// The amount of time that must pass before a card is flipped (milliseconds)
 		private int _flipTime = 1000;
 
 		// the score for the 2 players
@@ -37,6 +37,7 @@ namespace CardGames.GameLogic
 		public Snap ()
 		{
 			_deck = new Deck ();
+			_gameTimer = SwinGame.CreateTimer ();
 		}
 
 		/// <summary>
@@ -91,6 +92,7 @@ namespace CardGames.GameLogic
 				_started = true;
 				_deck.Shuffle ();		// Return the cards and shuffle
 
+				SwinGame.StartTimer (_gameTimer);
 				FlipNextCard ();		// Flip the first card...
 			}
 		}
@@ -102,6 +104,9 @@ namespace CardGames.GameLogic
 				_topCards [0] = _topCards [1];		// move top to card 2
 				_topCards [1] = _deck.Draw ();		// get a new top card
 				_topCards[1].TurnOver();			// reveal card
+
+				// Reset timer so we wait a full flip interval before auto-flipping again
+				SwinGame.ResetTimer (_gameTimer);
 			}
 		}
 
@@ -111,7 +116,13 @@ namespace CardGames.GameLogic
 		/// </summary>
 		public void Update()
 		{
-			//TODO: implement update to automatically slip cards!
+			if ( IsStarted && CardsRemain )
+			{
+				if ( SwinGame.TimerTicks (_gameTimer) >= (uint)_flipTime )
+				{
+					FlipNextCard ();
+				}
+			}
 		}
 
 		/// <summary>
@@ -128,21 +139,30 @@ namespace CardGames.GameLogic
 
 		/// <summary>
 		/// The player hit the top of the cards "snap"! :)
-		/// Check if the top two cards' ranks match.
+		/// Check if the top two cards' ranks match. Scores a point on a correct
+		/// snap; deducts a point on a miss. Stops the game after the hit.
 		/// </summary>
 		public void PlayerHit (int player)
 		{
-			//TODO: consider deducting score for miss hits???
-			if ( player >= 0 && player < _score.Length &&  	// its a valid player
-				 IsStarted && 								// and the game is started
-				 _topCards [0] != null && _topCards [0].Rank == _topCards [1].Rank) // and its a match
+			if ( player >= 0 && player < _score.Length && IsStarted )
 			{
-				_score[player]++;
-				//TODO: consider playing a sound here...
+				if ( _topCards [0] != null && _topCards [0].Rank == _topCards [1].Rank )
+				{
+					// Correct snap — award a point
+					_score[player]++;
+				}
+				else
+				{
+					// Mis-snap — deduct a point (minimum 0)
+					if ( _score[player] > 0 )
+						_score[player]--;
+				}
 			}
 
-			// stop the game...
+			// Stop and restart the game so cards cycle again
 			_started = false;
+			SwinGame.StopTimer (_gameTimer);
+			Start ();
 		}
 	
 		#region Snap Game Unit Tests

@@ -14,7 +14,8 @@ namespace CardGames
         }
 
 		/// <summary>
-		/// Respond to the user input -- with requests affecting myGame
+		/// Respond to the user input -- with requests affecting myGame.
+		/// Player 1 presses A to snap; Player 2 presses L to snap.
 		/// </summary>
 		/// <param name="myGame">The game object to update in response to events.</param>
 		private static void HandleUserInput(Snap myGame)
@@ -22,9 +23,16 @@ namespace CardGames
 			//Fetch the next batch of UI interaction
 			SwinGame.ProcessEvents();
 
-			if (SwinGame.KeyTyped (KeyCode.vk_SPACE))
+			// Player 1 snaps with 'A'
+			if (SwinGame.KeyTyped (KeyCode.vk_a))
 			{
-				myGame.FlipNextCard ();
+				myGame.PlayerHit (0);
+			}
+
+			// Player 2 snaps with 'L'
+			if (SwinGame.KeyTyped (KeyCode.vk_l))
+			{
+				myGame.PlayerHit (1);
 			}
 		}
 
@@ -36,13 +44,16 @@ namespace CardGames
 		{
 			SwinGame.ClearScreen(Color.White);
 
+			// Draw instructions
+			SwinGame.DrawText ("Player 1 [A]        Player 2 [L]", Color.DarkGray, 0, 0);
+
 			// Draw the top card
 			Card top = myGame.TopCard;
 			if (top != null)
 			{
-				SwinGame.DrawText ("Top Card is " + top.ToString (), Color.RoyalBlue, 0, 20);
-				SwinGame.DrawText ("Player 1 score: " + myGame.Score(0), Color.RoyalBlue, 0, 30);
-				SwinGame.DrawText ("Player 2 score: " + myGame.Score(1), Color.RoyalBlue, 0, 40);
+				SwinGame.DrawText ("Top Card: " + top.ToString (), Color.RoyalBlue, 0, 20);
+				SwinGame.DrawText ("Player 1 score: " + myGame.Score(0), Color.RoyalBlue, 0, 35);
+				SwinGame.DrawText ("Player 2 score: " + myGame.Score(1), Color.RoyalBlue, 0, 50);
 				SwinGame.DrawCell (SwinGame.BitmapNamed ("Cards"), top.CardIndex, 350, 50);
 			}
 			else
@@ -50,7 +61,23 @@ namespace CardGames
 				SwinGame.DrawText ("No card played yet...", Color.RoyalBlue, 0, 20);
 			}
 
-			// Draw the back of the cards... to represent the deck
+			// Show game-over message when deck is exhausted
+			if ( ! myGame.CardsRemain )
+			{
+				int p1 = myGame.Score(0);
+				int p2 = myGame.Score(1);
+				string winner;
+				if (p1 > p2)
+					winner = "Player 1 wins!";
+				else if (p2 > p1)
+					winner = "Player 2 wins!";
+				else
+					winner = "It's a draw!";
+
+				SwinGame.DrawText ("Game Over! " + winner, Color.Red, 0, 70);
+			}
+
+			// Draw the back of the cards to represent the deck
 			SwinGame.DrawCell (SwinGame.BitmapNamed ("Cards"), 52, 160, 50);
 
 			//Draw onto the screen
@@ -74,8 +101,9 @@ namespace CardGames
 			//Load the card images and set their cell details
             LoadResources();
             
-			// Create the game!
+			// Create the game and start it immediately
 			Snap myGame = new Snap ();
+			myGame.Start ();
 
             //Run the game loop
             while(false == SwinGame.WindowCloseRequested())

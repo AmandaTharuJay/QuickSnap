@@ -54,7 +54,25 @@ namespace CardGames.GameLogic
 		/// </summary>
 		public void Shuffle()
 		{
-			//TODO: implement shuffle!
+			// Reset so all 52 cards are available
+			_topCard = 0;
+
+			// Ensure every card is face down
+			for (int i = 0; i < _cards.Length; i++)
+			{
+				if (_cards[i].FaceUp)
+					_cards[i].TurnOver();
+			}
+
+			// Fisher-Yates shuffle
+			Random rng = new Random();
+			for (int i = _cards.Length - 1; i > 0; i--)
+			{
+				int j = rng.Next(i + 1);
+				Card temp = _cards[i];
+				_cards[i] = _cards[j];
+				_cards[j] = temp;
+			}
 		}
         
 		/// <summary>
